@@ -1,0 +1,28 @@
+###############################################################################
+# HISTORY
+###############################################################################
+
+Version 1.00  2007-08-31
+   Initial release (as Data::ALoNE)
+
+Version 1.01  2008-01-24
+   Added _ae so that the AEs are actually calculated and stored (a
+      significant number of the guts routines were rewritten to
+      take advantage of this)
+   Significant reorg/rewrite of the guts to clean it up
+   Updated test.pl
+
+Version 2.00  2008-05-05
+   Updated test.pl
+   Abstracted some of the routines into the newly created Data::NDS
+      module (complete rewrite to account for this)
+   Renamed to Data::NDS::Multisource
+   Added Build.PL and several other things to meet requirements on
+      http://cpants.perl.org/
+
+Version 2.01  2008-06-12
+   Additional changes to meet requirements on http://cpants.perl.org/
+   Much faster
+   Better handling of defaults
+
+Version 2.02

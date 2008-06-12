@@ -1,0 +1,48 @@
+#
+
+_default:
+
+ele1:
+  a : 1a
+  t :
+     aa : 11
+     bb : 22
+  x :
+     w  : baz
+     y  :
+        - foo
+        - bar
+
+ele2:
+  b : bb
+
+ele3:
+  c : 3c
+
+ele4:
+  a : 4a
+  b : bb
+  x :
+     y  :
+        - baz
+  xx:
+     -
+       aaa : bbb
+       ccc : ddd
+     -
+       eee : fff
+
+ele5:
+  c : 5c
+  b : 5b
+  x :
+     y  :
+        - foo
+        - baz
+  xx:
+     -
+       ggg: hhh
+  o :
+    - a
+    - b
+    - c

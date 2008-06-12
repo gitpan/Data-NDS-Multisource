@@ -1,0 +1,14 @@
+sources:
+   source1:
+      type : yaml
+      file : 7_Source1.yaml
+      write: 1
+   source2:
+      type : yaml
+      file : 7_Source2.yaml
+      write: 1
+
+priority:
+   "/"    : "source1 source2"
+   "/a"   : "source2"
+   "/b"   : "source1"

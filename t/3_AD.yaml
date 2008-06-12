@@ -1,0 +1,19 @@
+sources:
+   source1:
+      type : yaml
+      file : 3_Source1.yaml
+      write: 0
+      default:
+        - [ "_default" ]
+   source2:
+      type : yaml
+      file : 3_Source2.yaml
+      write: 0
+      default:
+        - [ "_default" ]
+
+options:
+   - "ordered    1"
+
+priority:
+   "/"    : "source1 source2"

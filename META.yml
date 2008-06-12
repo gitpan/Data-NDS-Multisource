@@ -1,0 +1,28 @@
+---
+name: Data-NDS-Multisource
+version: 2.01
+author:
+  - 'Sullivan Beck <sbeck@cpan.org>'
+abstract: Data structures defined in multiple sources
+license: perl
+resources:
+  license: http://dev.perl.org/licenses/
+requires:
+  Carp: 0
+  Cwd: 0
+  Data::NDS: 0
+  File::Basename: 0
+  File::Spec: 0
+  YAML::Syck: 0
+  perl: 5.6.0
+build_requires:
+  File::Copy: 0
+  Test::More: 0
+provides:
+  Data::NDS::Multisource:
+    file: lib/Data/NDS/Multisource.pm
+    version: 2.01
+generated_by: Module::Build version 0.2808
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2

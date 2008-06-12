@@ -1,0 +1,789 @@
+=pod
+
+=head1 NAME
+
+Data::NDS::Multisource - Data structures defined in multiple sources
+
+=head1 SYNOPSIS
+
+  use Data::NDS::Multisource;
+
+=head1 DESCRIPTION
+
+This module allows you to work with a set of elements, each of which
+may be a complex, arbitrarily deep, nested data structure. The nested
+data structures must consist only of scalars, hashes, and lists. The
+set of elements is stored either as a hash or a list.
+
+This module makes use of the Data::NDS module for most of handling of
+each element, and a working knowledge of that module is assumed here.
+
+Every elements must be based on the same structure (though it is not
+required that all elements contain all of the structure). Each element
+must be uniquely named if they are stored in a hash, or they will be
+accessed by index if stored as a list.
+
+The definition of each element may come from a single data source, or
+it may be a combination of data coming from several different data
+sources, each independently maintained. The part of an element defined
+in a single source is called a partial element. The full element is
+the combination of all of the partial elements from each data source.
+
+This module allows you to do several things:
+
+=over 4
+
+=item Easily access the data stored somewhere in an element
+
+This module will use a path (described below) to traverse
+through the data structure to return only the segment needed.
+
+=item Enforce structural integrity of each element
+
+Every element is required to have the same structure (although it is
+not necessary that all parts of the structure be present in all
+elements). This module will ensure that that is the case, and will
+report any errors.
+
+=item Optionally enforce how the element is partitioned
+
+Each data source may be used to supply any part of the structure of
+the element, or some sources may be used to supply only specific parts
+of it.
+
+=item Merge data from different sources automatically
+
+The data from different sources are merged automatically, and when
+accessing data from an element, you are accessing the merged data
+from the full (merged) element.
+
+=item Easily delegate management of parts of the data
+
+Since each data source is independent from the others, they can each
+be maintained separately, and in whatever manner is most convenient.
+
+=item May handle (in the future) different types of data sources
+
+Currently, all data sources are YAML files, but potentially databases,
+hash files, text files, or other typess may be added.
+
+=back
+
+=head1 WHAT DOES THAT MEAN???
+
+This modules was designed to solve several common problems:
+
+A frequent problem is that I want to define a set of complex objects
+in a uniform way. I want to define each object as a complex data
+structure, and I want all of the objects to have the same
+structure. This module can be used for that, with automatic error
+checking to make sure that the objects are defined in the same way.
+That way, I don't have to write a complex parser every time I run into
+this problem.
+
+Another problem is that the definition of an object often doesn't come
+from one single location. Often, the complete description of the
+object may come from several different sources. Rather than treat
+these souces separately (which is sometimes difficult since the
+partition defining which data comes from which source may not be
+completely rigid), it is easier to treat all of the data as being
+merged into one complete object.  This module will merge partial
+object definitions from multiple sources into a single definition,
+even with very complex data structures.
+
+Occasionally I run into the problem where I have a data definition
+that can come from multiple sources, some of which may be more
+reliable (or more trusted) than others. This module can also combine
+this data assigning higher preference to more reliable
+sources. Alternately, I can have defaults provided from one central
+source, but actual values, when available, coming from alternate
+sources that override the defaults.
+
+=head1 MULTISOURCE DESCRIPTION FILE
+
+The description of a multisource set of elements consists of two
+pieces of information.  First, a description of all data sources is
+required. Second, a description of how the partial definitions from
+different data sources merge together to form the complete element
+definition is necessary. Additional options may also be present to
+define some of the behavior of the merge.
+
+The Multisource Description (MD) is stored in a YAML file, and contains
+the following sections:
+
+  sources:
+     SOURCE_NAME_1 :
+        SOURCE_DESCRIPTION_1
+     SOURCE_NAME_2 :
+        SOURCE_DESCRIPTION_2
+     ...
+
+  options:
+     - "OPTION_1 VALUE_1a VALUE_1b ..."
+     - "OPTION_2 VALUE_2a VALUE_2b ..."
+     ...
+
+  priority:
+     PATH_1  : PRIORITY_LIST_1
+     PATH_2  : PRIORITY_LIST_2
+     ...
+
+The sources section is described in the MD SOURCES SECTION below. The
+options section is optional and is described in the MD OPTIONS SECTION
+below.  The priority section is described in the MD PRIORITY SECTION below.
+
+=head1 MD SOURCES SECTION
+
+The sources section of the MD file defines the sources of data. It is
+a hash with several keys:
+
+=over 4
+
+=item type
+
+This key is required for all source descriptions. It is the type of
+data source. Currently, B<yaml> is the only supported type, but
+eventually, others such as B<hash>, B<database> (and perhaps others)
+may be added.
+
+=item file
+
+This key is required for all source types that are read from a file.
+The value is the name of the file containing the data.
+
+This key is required for B<yaml> data sources.
+
+=item write
+
+The value for this key is 0 or 1. It may be included for all data
+source types, but is optional.  It defaults to 1 which means that the
+data source may be written to. In order to make a data source
+read-only, this can explicitly be set to 0.
+
+=item default
+
+This key may be included for all data source types and is described
+below in the section on DEFAULT DATA.
+
+=back
+
+=head1 ELEMENTS AND DATA SOURCES
+
+Every data source contains a set of elements. The elements are either
+numbered (and stored in a list) or named (and stored in a hash). The
+data source may contain the entire definition of an element, or it may
+only define a portion of the total element.
+
+The part of an element that is defined in one source is referred to as
+a partial element (PE). The PEs from all data sources are combined to
+form complete elements (CEs).  The methods of merging the PEs into CEs
+depend on several factors and are described below in the section
+MERGING PEs INTO CEs.
+
+As each data source is read in, a complete description of the possible
+structure of each element is determined. Since all elements must have
+a consistent data structure (this is discussed fully in the ACCESSING
+DATA section), this description consists of the combination of the
+data structure of all elements read in. This description is stored in
+the MS as a structural meta-description (SMD).
+
+It is not necessary that all elements be included in all data sources.
+It is also not necessary that all parts of the structure exist in
+each data source.
+
+It is also not required that the same parts of each element always be
+defined in the same source. However, it will probably make life
+simpler if some consistency is self-imposed. For example, if all
+elements consist of a hash with two keys "foo" and "bar", and these
+are read in from two different data sources, it might be best if all
+of the "foo" elements came from one source, and all of the "bar"
+elements came from another. Alternately, one source might be
+considered the primary source, and the second source might be used to
+make modifications to it by overriding data from the first (this is
+discussed in the MD PRIORITY SECTION).
+
+=head1 ACCESSING DATA
+
+Every element (and by that, we mean CEs since we are really interested
+in accessing the complete element instead of partial elements defined
+in different data sources) is either a member of a hash or list,
+depending on whether the data is read in as a hash or list.
+
+Each element can be an arbitrarily complex nested data structure
+consisting of scalars, lists, and hashes. When referring to a specific
+piece of data, a path is used.
+
+Handling of individual elements is done using the Data::NDS module,
+so an understanding of that module is assumed. For a comnplete understanding
+of how the data structures are referenced, and how paths work, please
+refer to the documentation for that module.
+
+The data structure of all elements are the same. What this means is
+that if the path "/foo/1/bar" is valid for one element, it is valid
+for ALL of them. The data may or not be present... but at least the
+path is valid.
+
+=head1 DEFAULT DATA
+
+In each data source, some of the elements may be used to supply
+defaults for other PEs. These default elements are NOT treated as PEs,
+and do not directly form any part of any CE themselves.
+
+Default elements are defined using the "defaults" key in the sources
+section in the MD file.
+
+The value of the "defaults" key is a list of default descriptors, and
+each default descriptor is a list of fields.
+
+The first field is the name assigned to one of the elements in the
+source or index if it is a list.  Any element named here will be used
+to supply defaults, but will NOT be used as a PE for any CE.
+
+A default descriptor is of one of the following forms:
+
+   A.  ( NAME/INDEX [RULESET] )
+   B.  ( NAME/INDEX [RULESET] PATH )
+   C.  ( NAME/INDEX [RULESET] PATH VALUE )
+
+A descriptor of the first (A) form supplies defaults for ALL PEs in
+that data source. Descriptors of the (B) form supply defaults for all
+PEs which have that path defined. Descriptors of the (C) form supply
+defaults for all PEs which have that path defined, and that path refers
+to a scalar value, and the value is VALUE.
+
+All default PEs may apply, and are applied in the order they are
+included in the MD file.
+
+For example, if you have the lines:
+
+   default:
+     - [ "_default_1", "/foo" ]
+     - [ "_default_2", "myruleset", "/bar", "baz" ]
+     - [ "_default" ]
+
+the three of the elements in the data source (which is a hash) are
+named "_default_1", "_default_2", and "_default", and these are three
+very special PEs. They are not used to form CEs directly (and will not
+be included in a list of all of the elements in the data source).
+Instead, these provide default values for other PEs in the data source.
+
+When reading elements from this data source, each is checked while it
+is being read in.  If it has a top-level hash key "foo", the PE named
+"_default_1" is added to it (using the merge rules described in the
+MERGING PEs INTO CE section).  Then, if the resulting element has a
+top-level hash element "bar" which is a scalar with the value "baz",
+additional missing sections are supplied from the "_default_2"
+PE. This merge is done using the "myruleset" ruleset. Finally, any
+default in the "_default" PE is added.
+
+Note that the defaults ONLY APPLY to a single data source. They do
+not supply values for the a PE in a different data source. This has
+two implications:
+
+First, a default NEVER accesses a PE from another data source. In
+other words, if you have the default:
+
+   - [ "_default_1", "/foo" ]
+
+this default only applies to elements where "foo" is defined in this
+data source. "/foo" may be defined in other data sources, but it will
+not trigger the default.
+
+Second, when constructing a PE from the defaults elements and the
+explicitly defined elements, the rules for merging defaults with
+explicit data are used, but once the PE is constructed for a data
+source, it no longer matters whether data came from a default sorce or
+an explicit source. It is now treated as part of the PE with respect
+to merging multiple PEs together into an CE.
+
+When working with data sources containing lists of elements, default
+elements (if any) should be the first elements in the list.  If they
+are not, some of the operations (especially deleting an element) may
+cause problems.
+
+=head1 MD PRIORITY SECTION
+
+The priority section of the MD file tells how to merge the PEs from
+two different data sources into each other to form an CE and where
+modifications to the data (if any) should be stored.
+
+The priority section is a hash. Each key in this section is a data
+path, and the value is a strings containing an optional ruleset
+followed by a space separated list of data sources.
+
+If you have the lines:
+
+   priority:
+     "/"        : "source2 source3"
+     "/foo"     : "myruleset source1 source2 source3"
+     "/bar"     : "source1"
+     "/bar/baz" : "myruleset source2 source3"
+
+it means that any data paths starting with the element "/foo" would be
+read from source1 followed by source2 followed by source3. The data
+would be merged with the "myruleset" ruleset. All data starting with
+the "/bar" element (except those starting with "/bar/baz") would be
+read only from source1. All other data paths would be read from
+source2 followed by source3.
+
+Note that in this example, the path "/foobar" would be covered by
+the "/" rule, NOT the "/foo" line since "/foobar" is nowhere in
+a path which contains the "/foo" element.
+
+Another thing to note is that there may be instances where data is
+read which is never accessed. For example, the only keys accessible in
+source1 are "/foo" and "/bar", but there may physically be other keys in
+that file. These keys will be preserved (for example, if the YAML
+source was writable and needed to be rewritten, keys that were not
+accessible would still be written out so they were preserved), but
+will never be accessed.
+
+Once it is determined that data exists in a path in one or more sources,
+the data must be merged as described in the following section.
+
+Every MD file must have a priority section, and that section should have
+a line with the path set to "/" (otherwise, some data may get ignored).
+
+=head1 MD OPTIONS SECTION
+
+The options section is optional and sets various default behaviors
+for an MD. The options section contains a list of strings. Each string
+is a space separated list of values. The first value in the string can
+be any of the following:
+
+=over 4
+
+=item merge_hash, merge_ol, merge_ul, merge_scalar, merge
+
+A description of these options is given in the Data::NDS module. The
+remaining values for each option are values appropriate for passing to
+the set_merge method. So, for example, the MD file could contain:
+
+   options:
+      - "merge_hash merge"
+      - "merge_hash keep ruleset1"
+      - "merge keep /u"
+
+=item ordered, uniform_hash, uniform_ul, uniform
+
+A description of these options is given in the Data::NDS module. The
+remaining values for each option are values appropriate for passing to
+the set_structure method. So, for example, the MD file could contain:
+
+   options:
+      - "ordered    1"
+      - "uniform_ul 0"
+      - "uniform    1 /foo"
+
+=back
+
+=head1 MERGING PEs INTO CEs
+
+When creating an CE from multiple PEs, the data sources are
+prioritized as described above. Based on this rank, PEs are combined
+into a single CE using the Data::NDS module.
+
+Structural information and merge methods are all set in the MD options
+section described above. PEs are taken in the order given in the
+priority section and merged using the merge information defined
+in the options.
+
+=head1 SAMPLE MD FILE
+
+To illustrate the above, a sample MD description file might look like
+the following:
+
+   sources:
+      source1:
+         type : yaml
+         file : 2_Source1.yaml
+         write: 0
+         default:
+           - [ "_default" ]
+      source2:
+         type : yaml
+         file : 2_Source2.yaml
+         write: 0
+         default:
+           - [ "_default" ]
+
+   options:
+      - "ordered      0"
+      - "ordered      1      /o1"
+      - "merge_ul     append"
+
+      - "merge_hash   merge  def_append"
+      - "merge_ol     merge  def_append"
+      - "merge_ul     append def_append"
+      - "merge_scalar keep   def_append"
+
+   priority:
+      "/"    : "source1 source2"
+      "/a"   : "source2"
+      "/b"   : "source1"
+
+=head1 METHODS
+
+=over 4
+
+=item new
+
+   $obj = new Data::NDS::Multisource;
+   $obj = new Data::NDS::Multisource FILE;
+
+This creates a new multisource description. An optional file name can
+be passed in. This is the name of the MD file.
+
+If the name of the MD file is passed in, the file is read, and the
+data from all data sources is read and initialized. In this case, the
+init method should NOT be used.
+
+If no file is passed in, you need to use the init method to initialize
+everything.
+
+=item version
+
+   $version = $obj->version;
+
+Returns the version of this modules.
+
+=item warnings
+
+   $obj->warnings(FLAG);
+
+If this method is called, warnings can be turned on or off. If FLAG
+is non-zero, non-fatal warnings will be given as appropriate.
+
+=item init
+
+   $obj = new Data::NDS::Multisource;
+   $obj->init(MD_FILE);
+
+This reads an MD file to get a list of all data sources. It then reads all
+the data from the sources, and initializes it as appropriate.
+
+As part of the initialization, a description of the full possible
+structure of each element is created so that all data access and
+modification can be checked for consistency.
+
+=item sources
+
+   @source = $obj->sources;
+
+Returns a list of all sources in the MD file.
+
+=item eles
+
+   @eles = $obj->eles;
+
+Returns a list of all element names or indices in the MD.
+
+=item eles_in_source
+
+   @eles = $obj->eles_in_source($source);
+
+Returns a list of all element names or indices in the MD that are
+contained in the given data source.
+
+=item ele_in_sources
+
+   @sources = $obj->ele_in_sources($ele);
+
+Returns a list of all sources containing the given element.
+
+=item ele_in_source
+
+   $flag = $obj->ele_in_source($source,$ele);
+
+Returns 1 if the given elemtent is defined in that source, 0
+otherwise.
+
+=item ele
+
+   $flag = $obj->ele($ele);
+
+Returns 1 if $ele is an element in any source in the MD.
+
+=item access
+
+The access method is used to access data in the MD at any path. The
+data returned depends on the type of data stored at that path, and the
+type of data requested (which can be a scalar or list.
+
+There are two ways to use the access method. The first is to access
+data from a single element:
+
+   $val  = $obj->access($ele,$path [,$warnings]);
+   @list = $obj->access($ele,$path [,$warnings]);
+
+Here, $ele is the name or index of one of the elements. If it is
+invalid, a warning is issued and undef is returned.
+
+The return value depends on the type of data which is at $path and
+whether it is called in scalar or list context. The return values
+are:
+
+   Context   Path      Returns
+
+   scalar    scalar    The value at path
+             list      The length of the list
+             hash      undef
+   list      scalar    undef
+             list      The list of elements
+             hash      The list of hash keys
+
+The second way is to access data from a list of elements (passed in
+as a list reference):
+
+   $val  = $obj->access($elelist,$path [,$warnings]);
+   %hash = $obj->access($elelist,$path [,$warnings]);
+
+$elelist is a list reference containing any number of elements. If any
+of the elements are invalid, a warning is issued and it is removed
+from the list. If an element is valid, but it does not contain the
+path, undef is returned for the value for that element.
+
+The return value depends on the type of data at $path and whether is
+is called in scalar or list context. The return values are:
+
+   Context   Path      Returns
+
+   scalar    *         undef
+   list      scalar    A hash of ele => value
+             list      A hash of ele => listref
+             hash      A hash of ele => hashref
+
+$path should be a valid path or a warning is issued and undef is
+returned.
+
+If $warnings is passed in, an additional warning may be issued if
+the requested data is not present in that element.
+
+=item which
+
+  @ele = $obj->which($path,$val [,$path,$val, ...]);
+
+This returns a list of all elements which have the value $val stored
+at path. If multiple $path/$vals are included, all must match.
+
+If $path points to a scalar, the value is compared directly. $val
+can also be any of the following special values:
+
+   _defined_      true if the value is defined
+   _nonzero_      true if the value is non-zero
+   _true_         true if the value evaluates to true
+   _false_        true if the value evaluates to false
+
+If @path points to a list of data structures, $val must be an integer,
+and a list of names of elements containing that list element (numbered
+starting at 0) are returned.  If @path points to a list of scalars,
+all elements are returned for which $val is included in the list. $val
+can also be any of the following:
+
+   _empty_        true if the list is empty (or not defined)
+   _nonempty_     true if the list has at least one element
+   _I_            true if the I'th element is defined (where I in an
+                  integer) (elements are numbered starting at 0)
+   _=I_           true if there are exactly I elements in the list
+   _>I_           true if there are more than I elements in the list
+   _<I_           true if there are fewer than I elements in the list
+                  (but at least 1... to test for 0 elements, use _empty_)
+
+If @path points to a hash, all elements are returned which have $val
+as a hash key (it must exist AND point to a defined value).
+
+=item which_sources
+
+   ($found,@source) = $obj->which_sources($ele,$path [,$flag]);
+
+This returns a list of all sources which contain a value for at the
+given path for the given element. If $flag is passed in, can be
+any of the following:
+
+   all           a list of all sources which contain any value
+                 at the path (this is the default option)
+   all-val       a list of all sources which contain the CE value
+                 at the path
+
+   readonly      similar to all/all-val except only sources which
+   readonly-val  are NOT writable are returned
+
+   writable      similar to all/all-val except only writable sources
+   writable-val  are returned
+
+It returns 1 (and the sources) if a list of sources were found. It
+returns 0 and a possible error code otherwise.
+
+Error codes are:
+
+  -1     no error encountered, but this path not set for the
+         given element
+   0     no error encountered, but no sources found which match
+         the criteria
+   1     invalid element
+   2     invalid path
+   3     path does not refer to a scalar value with one of the
+         *-val options
+
+=item delete_ele
+
+   $obj->delete_ele($ele);
+
+This deletes the element named $ele. This only affects the working
+copy of the data. To actually save the data, use the save method.
+
+=item rename_ele
+
+   $err = $obj->rename_ele($ele,$newele);
+
+This renames an element from $ele to $newele. It returns 1 if the
+operation cannot be performed because there is already an element
+named $newele. This only affects the working copy of the data. To
+actually save the data, use the save method.
+
+=item update_ele
+
+   $err = $obj->update_ele($ele,$path,$val [,$which] [,$ruleset]);
+
+This will set the value for an element at a given path. This only
+affects the working copy of the data. To actually save the data, use
+the save method.
+
+It will store $val in the given path, provided it has the correct
+structure.
+
+$which is one of the values:
+   curr
+   currval
+   first
+   firstval
+   all
+   >NAME
+and is used to define which data source(s) are to be updated.
+
+The value in the CE may come from any PE in the list (as described in
+the MD PRIORITY SECTION above).  Any number (including zero) of those
+sources may be writable. When updating an element, only writable
+sources may be modified, but in the case of multiple writable sources,
+$which define which of them are updated.
+
+The meaning of the value of $which depends on whether $val is a scalar
+or not.
+
+If $val is a scalar, the following sources are updated:
+
+   curr     All writeable sources which have any value
+            at the path
+   currval  All writeable sources which have the CE value
+            at the path
+   all      All writeable sources which contain the element,
+            even if they do not have a value at the path
+
+If $val is not a scalar, the following sources are updated:
+
+   curr, currval
+            All writeable sources which have any value at
+            the path
+   all      All writeable sources which contain the element,
+            even if they do not have a value at the path
+
+In both cases, >NAME updates the named source, regardless of whether
+it currently has a value at the path.
+
+The default value is "currval".
+
+The default behavior is to set the the value replacing anything that is
+currently there.  If $ruleset is passed in, it allows you to merge the
+value in using the named ruleset. If $ruleset is passed in as "", it
+uses the default (unnamed) ruleset.
+
+The error flag produced is:
+
+   0   No error
+   1   Invalid option passed in
+   2   Invalid source in >NAME value
+   3   The value has an invalid structure
+   4   There are no writable sources to update
+   5   Update failed
+
+=item path_sources
+
+   @source = $obj->path_sources($path);
+
+This lists the sources in the priority in which they may contribute
+to a value at $path.
+
+See the MD PRIORITY SECTION for more information.
+
+=item add
+
+   $err = $obj->add($ele,$val);
+
+This adds a new element to the list. It stores each portion of the
+element in the first writable source which contributes to the path
+of that data.
+
+For example, if the priority section of the MD file includes:
+
+   priority:
+      "/"   : "A B"
+      "/a"  : "A"
+      "/b"  : "B"
+
+(assuming that A and B both refer to writable sources), then storing
+an element which is a hash containing:
+
+   { a   => foo
+     b   => bar
+     c   => xxx }
+
+will create the element in both sources, and store the /a and /c portions
+in source A, and store the /b portion in source B.
+
+The error flag produced is:
+
+   0   No error
+   1   Element already exists
+   2   Invalid structure
+   3   Portions of the new element could not be
+       assigned to a writable source (to fix this,
+       make sure that the MD PRIORITY SECTION has
+       an entry for "/" which contains at least
+       one writable source)
+
+=item dump
+
+   $string = $obj->dump($ele,$path,%opts);
+
+This will create a string containing the value of the given element at
+the given path. %opts is a set of options suitable for passing to the
+print method in the Data::NDS module.
+
+=item nds
+
+   $nds = $obj->nds();
+
+This returns a Data::NDS object which contains the structural information
+that describe elements in the multisource data files.
+ 
+=item save
+
+   $obj->save();
+
+This will save all modified data sources. Although typically called at
+the end of a program, it can safely be called at any time.
+ 
+=back
+
+=head1 KNOWN PROBLEMS
+
+None at this point.
+
+=head1 LICENSE
+
+This script is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
+
+=head1 AUTHOR
+
+Sullivan Beck (sbeck@cpan.org)

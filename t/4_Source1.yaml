@@ -1,0 +1,20 @@
+#
+
+_default:
+  l : [ l1, l2 ]
+
+one:
+  a : 1a
+  b : bb
+
+three:
+  a : 3a
+  l : [ l3 ]
+
+four:
+  d :
+    e : 4e
+  l : [ '' , l4 ]
+
+five:
+  l : [ l5a ]

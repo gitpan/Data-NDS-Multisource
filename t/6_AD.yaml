@@ -1,0 +1,25 @@
+sources:
+   source1:
+      type : yaml
+      file : 6_Source1.yaml
+      write: 1
+      default:
+        - [ "_default", "def_append" ]
+   source2:
+      type : yaml
+      file : 6_Source2.yaml
+      write: 1
+      default:
+        - [ "_default" ]
+
+options:
+   - "ordered      0"
+   - "merge_ul     keep"
+
+   - "merge_hash   merge  def_append"
+   - "merge_ol     merge  def_append"
+   - "merge_ul     append def_append"
+   - "merge_scalar keep   def_append"
+
+priority:
+   "/"    : "source1 source2"

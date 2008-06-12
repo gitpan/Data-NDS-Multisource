@@ -1,0 +1,15 @@
+sources:
+   source1:
+      type : yaml
+      file : 5_Source1.yaml
+      write: 0
+      default:
+        - [ "_default" ]
+
+options:
+   - "ordered      0"
+   - "merge_ul     append"
+
+priority:
+   "/" : "source1"
+
