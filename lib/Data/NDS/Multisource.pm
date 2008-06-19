@@ -26,7 +26,7 @@ use File::Basename;
 use File::Spec;
 
 use vars qw($VERSION);
-$VERSION = "2.01";
+$VERSION = "2.02";
 
 ###############################################################################
 # BASE METHODS
@@ -1359,10 +1359,12 @@ sub update_ele {
    # Check the structure of $val. It's okay to add new structure here.
    #
 
-   my($err,$v) = $nds->check_value($path,$val,1);
-   if ($err) {
-      _Error("[update_ele] Invalid structure",0,$err,$val,0,0);
-      return 3;
+   if (defined $val) {
+      my($err,$v) = $nds->check_value($path,$val,1);
+      if ($err) {
+         _Error("[update_ele] Invalid structure",0,$err,$val,0,0);
+         return 3;
+      }
    }
 
    #
@@ -1430,19 +1432,35 @@ sub update_ele {
 sub _update_ele {
    my($self,$ele,$path,$val,$source,$ruleset) = @_;
    my $nds = $$self{"nds"};
-
-   #
-   # Update this source
-   #
-
    my $err;
-   if ($$self{"list"}) {
-      $err = $nds->merge_path($$self{"sources"}{$source}{"data"}[$ele],
-                              $val,$path,$ruleset);
+
+   if (! defined $val) {
+
+      #
+      # If $val is undefined, erase the path
+      #
+
+      if ($$self{"list"}) {
+         $err = $nds->erase($$self{"sources"}{$source}{"data"}[$ele],$path);
+      } else {
+         $err = $nds->erase($$self{"sources"}{$source}{"data"}{$ele},$path);
+      }
+
    } else {
-      $err = $nds->merge_path($$self{"sources"}{$source}{"data"}{$ele},
-                              $val,$path,$ruleset);
+
+      #
+      # Update this source
+      #
+
+      if ($$self{"list"}) {
+         $err = $nds->merge_path($$self{"sources"}{$source}{"data"}[$ele],
+                                 $val,$path,$ruleset);
+      } else {
+         $err = $nds->merge_path($$self{"sources"}{$source}{"data"}{$ele},
+                                 $val,$path,$ruleset);
+      }
    }
+
    return $err  if ($err);
 
    $$self{"sources"}{$source}{"modified"} = 1;

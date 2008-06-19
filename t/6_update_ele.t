@@ -18,15 +18,19 @@ use Data::NDS::Multisource;
 
 sub test {
   (@test) = @_;
-  my($ele,$path,$val,$obj) = @test;
+  my($obj) = pop(@test);
+  my($ele,$path,$val) = @test;
   my $val1 = $obj->access($ele,$path);
   my $err  = $obj->update_ele($ele,$path,$val);
   my $val2 = $obj->access($ele,$path);
+  $val2    = "ERASED"  if (! defined $val2);
   return ($val1,$err,$val2);
 }
 
 $tests = "
 one /a 1x ~ 1a 0 1x
+
+one /a ~ 1x 0 ERASED
 
 ";
 

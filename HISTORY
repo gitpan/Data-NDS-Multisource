@@ -25,4 +25,7 @@ Version 2.01  2008-06-12
    Much faster
    Better handling of defaults
 
-Version 2.02
+Version 2.02  2008-06-19
+   Added support for erasing paths to update_ele
+
+Version 2.03

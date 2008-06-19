@@ -1,6 +1,6 @@
 ---
 name: Data-NDS-Multisource
-version: 2.01
+version: 2.02
 author:
   - 'Sullivan Beck <sbeck@cpan.org>'
 abstract: Data structures defined in multiple sources
@@ -21,7 +21,7 @@ build_requires:
 provides:
   Data::NDS::Multisource:
     file: lib/Data/NDS/Multisource.pm
-    version: 2.01
+    version: 2.02
 generated_by: Module::Build version 0.2808
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html

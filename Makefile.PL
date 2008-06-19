@@ -3,7 +3,7 @@ use ExtUtils::MakeMaker;
 
 WriteMakefile(
 	NAME             => 'Data::NDS::Multisource',
-	VERSION	         => '2.01',
+	VERSION	         => '2.02',
 	($] >= 5.005
 	? (ABSTRACT=>'Data structures defined in multiple sources',
 	   AUTHOR  =>'Sullivan Beck (sbeck@cpan.org)')

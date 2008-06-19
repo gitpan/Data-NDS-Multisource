@@ -3,7 +3,7 @@ use Module::Build;
 
 my $build = Module::Build->new(
 	license            => 'perl',
-	dist_version       => '2.01',
+	dist_version       => '2.02',
 	dist_author        => 'Sullivan Beck <sbeck@cpan.org>',
 	module_name        => 'Data::NDS::Multisource',
 	dist_abstract      => 'Data structures defined in multiple sources',

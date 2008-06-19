@@ -54,8 +54,8 @@ of it.
 =item Merge data from different sources automatically
 
 The data from different sources are merged automatically, and when
-accessing data from an element, you are accessing the merged data
-from the full (merged) element.
+accessing data from an element, you are accessing the data from the
+full (merged) element.
 
 =item Easily delegate management of parts of the data
 
@@ -66,6 +66,17 @@ be maintained separately, and in whatever manner is most convenient.
 
 Currently, all data sources are YAML files, but potentially databases,
 hash files, text files, or other typess may be added.
+
+=item Supply defaults for missing data
+
+Defaults data structures can be used to supply defaults for missing
+data.
+
+=item Additional data checking
+
+Planed for a future release is the ability to add additional
+constraints to the data (for example, define which values are
+valid, etc.).
 
 =back
 
@@ -79,7 +90,9 @@ structure, and I want all of the objects to have the same
 structure. This module can be used for that, with automatic error
 checking to make sure that the objects are defined in the same way.
 That way, I don't have to write a complex parser every time I run into
-this problem.
+this problem. Methods are provided for imposing specific structural
+constraints on the data, or the structure can be wholly determined
+from reading the data.
 
 Another problem is that the definition of an object often doesn't come
 from one single location. Often, the complete description of the
@@ -98,6 +111,32 @@ this data assigning higher preference to more reliable
 sources. Alternately, I can have defaults provided from one central
 source, but actual values, when available, coming from alternate
 sources that override the defaults.
+
+=head1 LIMITATIONS OF THIS MODULE
+
+The most important limitation is that (currently) only YAML data is
+supported. If your data cannot be stored in a YAML file for whatever
+reason, then this module will not be of use.
+
+Since this module is written completely in perl, and does a great deal
+of complex checking on every piece of data, it is probably not
+suitable for applications where speed is critical. It would be better
+to write data checking procedures specifically for the structures you
+are working with in order to improve speed.
+
+This module reads in all of the data from all sources, and stores two
+or three copies of everything (the raw data, the partial elements with
+all defaults merged in, and the full element containing all partial
+elements merged together). As such, it is not useful for working with
+data sets which cannot be stored easily in memory. Also, if each
+element is a simple structure, the overhead of this module is proably
+not worth it.
+
+But for working with relatively small sets of data (up to thousands of
+elements) which consist of at least 2 or 3 levels of nested data
+structure, this module will dramatically increase the ease of using
+and maintaing that data, and will add enormous amounts of error
+checking automatically, at no effort on your part.
 
 =head1 MULTISOURCE DESCRIPTION FILE
 
@@ -649,8 +688,9 @@ This will set the value for an element at a given path. This only
 affects the working copy of the data. To actually save the data, use
 the save method.
 
-It will store $val in the given path, provided it has the correct
-structure.
+If $val is defined, it will store it in the given path, provided it
+has the correct structure.  If $val is undefined, the path will be
+erased.
 
 $which is one of the values:
    curr
@@ -670,7 +710,7 @@ $which define which of them are updated.
 The meaning of the value of $which depends on whether $val is a scalar
 or not.
 
-If $val is a scalar, the following sources are updated:
+If $val is a scalar or undefined, the following sources are updated:
 
    curr     All writeable sources which have any value
             at the path
